@@ -55,8 +55,8 @@ public class QuicMQTTClient  implements MQTTClient {
     public MQTTConnection connect() throws Exception {
         ConnectMsg connMsg = createConnMsg(this.clientId);
         this.sock = new MqttQuicClientSocket(this.url);
-        logger.info(() -> "Created mqtt quic socket: " + this.clientId +" url:"+this.url);
+        logger.info(() -> "Created mqtt quic socket: " + this.clientId +" url: "+this.url);
         this.sock.sendMessage(connMsg);
-        return new QuicMQTTConnection(this.sock,this.clientId,connMsg);
+        return new QuicMQTTConnection(this.sock,this.clientId);
     }
 }
