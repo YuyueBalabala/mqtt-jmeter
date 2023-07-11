@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import net.xmeter.Constants;
 import org.apache.jmeter.samplers.Entry;
 import org.apache.jmeter.samplers.SampleResult;
 import org.apache.jmeter.threads.JMeterContextService;
@@ -51,6 +52,8 @@ public class ConnectSampler extends AbstractMQTTSampler {
 			if (!"".equals(getWsPath().trim())) {
 				parameters.setPath(getWsPath());
 			}
+			logger.info("choose Protocol :"+parameters.getProtocol());
+
 
 			String clientId;
 			if(isClientIdSuffix()) {
@@ -85,7 +88,9 @@ public class ConnectSampler extends AbstractMQTTSampler {
 		}
 		
 		try {
-			client = MQTT.getInstance(getMqttClientName()).createClient(parameters);
+			String clientName = Constants.QUIC_PROTOCOL.equals(getProtocol())?Constants.QUIC_MQTT_CLIENT_NAME:getMqttClientName();
+			logger.info("clientName:"+clientName);
+			client = MQTT.getInstance(clientName).createClient(parameters);
 
 			result.sampleStart();
 			connection = client.connect();

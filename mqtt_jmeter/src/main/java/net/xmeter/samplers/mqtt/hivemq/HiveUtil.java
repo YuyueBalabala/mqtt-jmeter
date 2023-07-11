@@ -16,6 +16,7 @@ class HiveUtil {
         ALLOWED_PROTOCOLS.add(Constants.SSL_PROTOCOL);
         ALLOWED_PROTOCOLS.add(Constants.WS_PROTOCOL);
         ALLOWED_PROTOCOLS.add(Constants.WSS_PROTOCOL);
+        ALLOWED_PROTOCOLS.add(Constants.QUIC_PROTOCOL);
     }
 
     static MqttQos map(MQTTQoS qos) {

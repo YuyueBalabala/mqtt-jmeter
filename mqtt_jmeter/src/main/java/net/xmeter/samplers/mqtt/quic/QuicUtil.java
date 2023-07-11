@@ -22,4 +22,23 @@ class QuicUtil {
             default: throw new IllegalArgumentException("Unknown QoS: " + qos);
         }
     }
+
+    static byte qosVal(MQTTQoS qoS){
+        byte qos=0;
+        switch (qoS){
+            case AT_MOST_ONCE:
+                qos=0;
+                break;
+            case AT_LEAST_ONCE:
+                qos=1;
+                break;
+            case EXACTLY_ONCE:
+                qos=2;
+                break;
+            default:
+                break;
+        }
+        return qos;
+    }
+
 }

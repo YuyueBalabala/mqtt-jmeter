@@ -14,6 +14,7 @@ class FuseUtil {
         ALLOWED_PROTOCOLS = new ArrayList<>();
         ALLOWED_PROTOCOLS.add(Constants.TCP_PROTOCOL);
         ALLOWED_PROTOCOLS.add(Constants.SSL_PROTOCOL);
+        ALLOWED_PROTOCOLS.add(Constants.QUIC_PROTOCOL);
     }
 
     static QoS map(MQTTQoS qos) {

@@ -67,6 +67,8 @@ public interface Constants {
 	public static final String SSL_PROTOCOL = "SSL";
 	public static final String WS_PROTOCOL = "WS";
 	public static final String WSS_PROTOCOL = "WSS";
+	public static final String QUIC_PROTOCOL = "QUIC";
+
 	public static final String DEFAULT_PROTOCOL = TCP_PROTOCOL;
 	public static final String FUSESOURCE_MQTT_CLIENT_NAME = "fusesource";
 	public static final String HIVEMQ_MQTT_CLIENT_NAME = "hivemq";
@@ -93,4 +95,5 @@ public interface Constants {
 	public static final int SUB_FAIL_PENALTY = 1000; // force to delay 1s if sub fails for whatever reason
 	
 	public static final boolean DEFAULT_SUBSCRIBE_WHEN_CONNECTED = false;
+	String QUIC_MQTT_CLIENT_NAME = "quic";
 }
