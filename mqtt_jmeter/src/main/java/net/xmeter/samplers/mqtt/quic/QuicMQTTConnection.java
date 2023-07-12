@@ -5,6 +5,7 @@ import net.xmeter.samplers.mqtt.MQTTConnection;
 import net.xmeter.samplers.mqtt.MQTTPubResult;
 import net.xmeter.samplers.mqtt.MQTTQoS;
 import net.xmeter.samplers.mqtt.MQTTSubListener;
+import net.xmeter.samplers.mqtt.quic.internal.mqtt.constants.MqttPacketType;
 import net.xmeter.samplers.mqtt.quic.mqtt.MqttQuicClientSocket;
 import net.xmeter.samplers.mqtt.quic.mqtt.callback.QuicCallback;
 import net.xmeter.samplers.mqtt.quic.mqtt.data.TopicQos;
@@ -43,6 +44,9 @@ public class QuicMQTTConnection implements MQTTConnection {
     private final String clientId;
     private boolean retained;
 
+    public MqttPacketType packetType;
+
+
 
 
     public QuicMQTTConnection(MqttQuicClientSocket sock,String clientId) {
@@ -54,16 +58,21 @@ public class QuicMQTTConnection implements MQTTConnection {
     private final String sendInfo = "Callback: Sent";
 
 
-    final BiFunction<Message, Socket, Integer> pubHandler = (msg, sock) -> {
+    final BiFunction<Message, Socket, Integer> connectHandler = (msg, sock) -> {
         String connInfo = "Callback: Connected";
         System.out.println(connInfo);
         try {
-            PublishMsg pubMsg = new PublishMsg();
-            pubMsg.setPayload(this.payload);
-            pubMsg.setQos(this.qos);
-            pubMsg.setTopic(this.topic);
-            pubMsg.setRetain(this.retained);
-            sock.sendMessage(pubMsg);
+            if (this.packetType == MqttPacketType.NNG_MQTT_SUBSCRIBE) {
+                List<TopicQos> topicQosList = Collections.singletonList(new TopicQos(this.topic, this.qos));
+                SubscribeMsg subMsg = new SubscribeMsg(topicQosList);
+                sock.sendMessage(subMsg);
+            } else if (this.packetType == MqttPacketType.NNG_MQTT_PUBLISH) {
+                PublishMsg pubMsg = new PublishMsg();
+                pubMsg.setPayload(this.payload);
+                pubMsg.setQos(this.qos);
+                pubMsg.setTopic(this.topic);
+                sock.sendMessage(pubMsg);
+            }
         } catch (Exception ex) {
             ex.printStackTrace();
             System.out.println(ex.getMessage());
@@ -72,21 +81,6 @@ public class QuicMQTTConnection implements MQTTConnection {
         return 0;
     };
 
-
-    final BiFunction<Message, Socket, Integer> subHandler = (msg, sock) -> {
-        String connInfo = "Callback: Connected";
-        System.out.println(connInfo);
-        try {
-            List<TopicQos> topicQosList = Collections.singletonList(new TopicQos(this.topic, this.qos));
-            SubscribeMsg subMsg = new SubscribeMsg(topicQosList);
-            sock.sendMessage(subMsg);
-
-        } catch (Exception ex) {
-            logger.log(Level.SEVERE, "sub failed ", ex);
-            return -1;
-        }
-        return 0;
-    };
 
     final BiFunction<Message, String, Integer> handler = (msg, arg) -> {
         System.out.println(arg);
@@ -137,11 +131,11 @@ public class QuicMQTTConnection implements MQTTConnection {
         this.topic = topicName;
         this.retained = retained;
         logger.info("clientId=>"+this.clientId+" payload=>"+this.payload+" topic=>"+topic +" qos=>"+this.qos);
-
+        this.packetType = MqttPacketType.NNG_MQTT_PUBLISH;
         try {
-            this.sock.setConnectCallback(new QuicCallback(pubHandler), this.sock);
+            this.sock.setConnectCallback(new QuicCallback(connectHandler), this.sock);
             this.sock.setSendCallback(new QuicCallback(handler), sendInfo);
-            Thread.sleep(500);
+            Thread.sleep(3000);
             return new MQTTPubResult(true);
         } catch (Exception exception) {
             return new MQTTPubResult(false, exception.getMessage());
@@ -155,7 +149,8 @@ public class QuicMQTTConnection implements MQTTConnection {
         String receivedInfo = "Callback: Received";
         for(String topic:topicNames){
             this.topic = topicNames[0];
-            this.sock.setConnectCallback(new QuicCallback(subHandler), this.sock);
+            this.packetType = MqttPacketType.NNG_MQTT_SUBSCRIBE;
+            this.sock.setConnectCallback(new QuicCallback(connectHandler), this.sock);
             logger.info("clientId=>"+this.clientId+" topic=>"+topic +" receivedInfo=>"+receivedInfo);
             this.sock.setReceiveCallback(new QuicCallback(recvHandler), receivedInfo);
             this.sock.setSendCallback(new QuicCallback(handler), sendInfo);
