@@ -25,21 +25,35 @@ public class QuicMQTTClient  implements MQTTClient {
     private String url;
     private ConnectMsg connMsg ;
 
+    private  short keepAlive;
+    private String username;
+    private String password;
+    private boolean cleanSession;
 
-    public QuicMQTTClient(ConnectionParameters parameters) throws NngException {
+
+    public QuicMQTTClient(ConnectionParameters parameters) {
         this.clientId = parameters.getClientId();
         this.url = createHostAddress(parameters);
-        this.connMsg = createConnMsg(parameters.getClientId(),parameters.getKeepAlive(),parameters.getUsername(),parameters.getPassword(),parameters.isCleanSession());
+        this.keepAlive = parameters.getKeepAlive();
+        this.username = parameters.getUsername();
+        this.password = parameters.getPassword();
+        this.cleanSession = parameters.isCleanSession();
     }
 
     private ConnectMsg createConnMsg(String clientId, short keepAlive, String username, String password, boolean cleanSession) throws NngException {
         ConnectMsg connMsg = new ConnectMsg();
-        connMsg.setCleanSession(cleanSession);
-        connMsg.setKeepAlive(keepAlive);
         connMsg.setClientId(clientId);
+
+
+//        connMsg.setCleanSession(cleanSession);
+//        connMsg.setKeepAlive(keepAlive);
+//        connMsg.setProtoVersion(4);
+//        connMsg.setPassword(password);
+//        connMsg.setUserName(username);
+        connMsg.setCleanSession(true);
+        connMsg.setKeepAlive((short) 60);
         connMsg.setProtoVersion(4);
-        connMsg.setPassword(password);
-        connMsg.setUserName(username);
+
         return connMsg;
     }
 
@@ -57,7 +71,7 @@ public class QuicMQTTClient  implements MQTTClient {
 
     @Override
     public MQTTConnection connect() throws Exception {
-        ConnectMsg connMsg = this.connMsg;
+        ConnectMsg connMsg =  createConnMsg(clientId,keepAlive,username,password,cleanSession);
         this.sock = new MqttQuicClientSocket(this.url);
         logger.info(() -> "Created mqtt quic socket: " + this.clientId +" url: "+this.url);
         this.sock.sendMessage(connMsg);
