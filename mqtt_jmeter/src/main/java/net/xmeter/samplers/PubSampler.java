@@ -94,6 +94,7 @@ public class PubSampler extends AbstractMQTTSampler {
 		JMeterVariables vars = JMeterContextService.getContext().getVariables();
 		connection = (MQTTConnection) vars.getObject("conn");
 		String clientId = (String) vars.getObject("clientId");
+		logger.info("conn:"+connection.toString());
 		logger.info("pub sampler clientId:"+clientId);
 		if (connection == null) {
 			result.sampleStart();

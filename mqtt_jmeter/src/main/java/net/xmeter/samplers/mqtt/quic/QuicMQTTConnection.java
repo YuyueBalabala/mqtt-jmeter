@@ -5,11 +5,9 @@ import net.xmeter.samplers.mqtt.MQTTConnection;
 import net.xmeter.samplers.mqtt.MQTTPubResult;
 import net.xmeter.samplers.mqtt.MQTTQoS;
 import net.xmeter.samplers.mqtt.MQTTSubListener;
-import net.xmeter.samplers.mqtt.quic.internal.mqtt.constants.MqttPacketType;
 import net.xmeter.samplers.mqtt.quic.mqtt.MqttQuicClientSocket;
 import net.xmeter.samplers.mqtt.quic.mqtt.callback.QuicCallback;
 import net.xmeter.samplers.mqtt.quic.mqtt.data.TopicQos;
-import net.xmeter.samplers.mqtt.quic.mqtt.msg.ConnectMsg;
 import net.xmeter.samplers.mqtt.quic.mqtt.msg.PublishMsg;
 import net.xmeter.samplers.mqtt.quic.mqtt.msg.SubscribeMsg;
 import net.xmeter.samplers.mqtt.quic.nng.Message;
@@ -21,6 +19,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -42,6 +41,7 @@ public class QuicMQTTConnection implements MQTTConnection {
     private MQTTSubListener listener;
 
     private final String clientId;
+    private boolean retained;
 
 
 
@@ -62,6 +62,7 @@ public class QuicMQTTConnection implements MQTTConnection {
             pubMsg.setPayload(this.payload);
             pubMsg.setQos(this.qos);
             pubMsg.setTopic(this.topic);
+            pubMsg.setRetain(this.retained);
             sock.sendMessage(pubMsg);
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -81,8 +82,7 @@ public class QuicMQTTConnection implements MQTTConnection {
             sock.sendMessage(subMsg);
 
         } catch (Exception ex) {
-            ex.printStackTrace();
-            System.out.println(ex.getMessage());
+            logger.log(Level.SEVERE, "sub failed ", ex);
             return -1;
         }
         return 0;
@@ -94,14 +94,14 @@ public class QuicMQTTConnection implements MQTTConnection {
     };
 
     final BiFunction<Message, String, Integer> recvHandler = (msg, arg) -> {
-        System.out.println(arg);
+        System.out.println("1111"+arg);
         try {
             PublishMsg publishMsg = new PublishMsg(msg);
             System.out.println("Topic: " + publishMsg.getTopic());
             System.out.println("Qos: " + publishMsg.getQos());
             System.out.println("Payload: " + StandardCharsets.UTF_8.decode(publishMsg.getPayload()));
         } catch (NngException e) {
-            System.out.println(e.getLocalizedMessage());
+            logger.log(Level.SEVERE, "recv failed ", e);
             throw new RuntimeException(e);
         }
 
@@ -135,6 +135,7 @@ public class QuicMQTTConnection implements MQTTConnection {
         this.payload = new String(message);
         this.qos = QuicUtil.qosVal(qos);
         this.topic = topicName;
+        this.retained = retained;
         logger.info("clientId=>"+this.clientId+" payload=>"+this.payload+" topic=>"+topic +" qos=>"+this.qos);
 
         try {
@@ -153,9 +154,9 @@ public class QuicMQTTConnection implements MQTTConnection {
         this.qos = QuicUtil.qosVal(qos);
         String receivedInfo = "Callback: Received";
         for(String topic:topicNames){
-            logger.info("clientId=>"+this.clientId+" topic=>"+topic);
-            this.topic = topic;
+            this.topic = topicNames[0];
             this.sock.setConnectCallback(new QuicCallback(subHandler), this.sock);
+            logger.info("clientId=>"+this.clientId+" topic=>"+topic +" receivedInfo=>"+receivedInfo);
             this.sock.setReceiveCallback(new QuicCallback(recvHandler), receivedInfo);
             this.sock.setSendCallback(new QuicCallback(handler), sendInfo);
         }

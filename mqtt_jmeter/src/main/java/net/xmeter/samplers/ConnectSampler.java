@@ -99,6 +99,7 @@ public class ConnectSampler extends AbstractMQTTSampler {
 			if (connection.isConnectionSucc()) {
 				vars.putObject("conn", connection); // save connection object as thread local variable !!
 				vars.putObject("clientId", client.getClientId());	//save client id as thread local variable
+				logger.info("conn:"+connection.toString());
 				topicSubscribed.put(client.getClientId(), new HashSet<>());
 				result.setSuccessful(true);
 				result.setResponseData("Successful.".getBytes());

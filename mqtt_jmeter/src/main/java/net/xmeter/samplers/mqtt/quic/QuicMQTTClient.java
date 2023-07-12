@@ -23,22 +23,26 @@ public class QuicMQTTClient  implements MQTTClient {
     private MqttQuicClientSocket sock;
     private String clientId;
     private String url;
+    private ConnectMsg connMsg ;
 
 
-    public QuicMQTTClient(ConnectionParameters parameters) {
+    public QuicMQTTClient(ConnectionParameters parameters) throws NngException {
         this.clientId = parameters.getClientId();
         this.url = createHostAddress(parameters);
+        this.connMsg = createConnMsg(parameters.getClientId(),parameters.getKeepAlive(),parameters.getUsername(),parameters.getPassword(),parameters.isCleanSession());
     }
 
-
-    private ConnectMsg createConnMsg(String clientId) throws NngException {
+    private ConnectMsg createConnMsg(String clientId, short keepAlive, String username, String password, boolean cleanSession) throws NngException {
         ConnectMsg connMsg = new ConnectMsg();
-        connMsg.setCleanSession(true);
-        connMsg.setKeepAlive((short) 60);
+        connMsg.setCleanSession(cleanSession);
+        connMsg.setKeepAlive(keepAlive);
         connMsg.setClientId(clientId);
         connMsg.setProtoVersion(4);
+        connMsg.setPassword(password);
+        connMsg.setUserName(username);
         return connMsg;
     }
+
 
 
     private String createHostAddress(ConnectionParameters parameters) {
@@ -53,7 +57,7 @@ public class QuicMQTTClient  implements MQTTClient {
 
     @Override
     public MQTTConnection connect() throws Exception {
-        ConnectMsg connMsg = createConnMsg(this.clientId);
+        ConnectMsg connMsg = this.connMsg;
         this.sock = new MqttQuicClientSocket(this.url);
         logger.info(() -> "Created mqtt quic socket: " + this.clientId +" url: "+this.url);
         this.sock.sendMessage(connMsg);

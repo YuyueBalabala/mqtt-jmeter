@@ -24,21 +24,21 @@ class QuicUtil {
     }
 
     static byte qosVal(MQTTQoS qoS){
-        byte qos=0;
+        String qos="0";
         switch (qoS){
             case AT_MOST_ONCE:
-                qos=0;
+                qos="0";
                 break;
             case AT_LEAST_ONCE:
-                qos=1;
+                qos="1";
                 break;
             case EXACTLY_ONCE:
-                qos=2;
+                qos="2";
                 break;
             default:
                 break;
         }
-        return qos;
+        return Byte.parseByte(qos);
     }
 
 }
