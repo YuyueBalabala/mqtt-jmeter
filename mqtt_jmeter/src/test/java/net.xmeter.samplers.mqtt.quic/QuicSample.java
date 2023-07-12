@@ -6,6 +6,7 @@ import net.xmeter.samplers.SubSampler;
 import net.xmeter.samplers.mqtt.*;
 import org.junit.Test;
 
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -31,6 +32,7 @@ public class QuicSample {
         MQTTClient client = MQTT.getInstance(Constants.QUIC_MQTT_CLIENT_NAME).createClient(parameters);
         MQTTConnection connection = client.connect();
         connection.publish("123-topic","111111".getBytes(),AT_LEAST_ONCE,true);
+        TimeUnit.SECONDS.sleep(60);
     }
 
     @Test

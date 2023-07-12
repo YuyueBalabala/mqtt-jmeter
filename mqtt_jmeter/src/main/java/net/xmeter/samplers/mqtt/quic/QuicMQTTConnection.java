@@ -60,7 +60,7 @@ public class QuicMQTTConnection implements MQTTConnection {
 
     final BiFunction<Message, Socket, Integer> connectHandler = (msg, sock) -> {
         String connInfo = "Callback: Connected";
-        System.out.println(connInfo);
+        logger.info(connInfo);
         try {
             if (this.packetType == MqttPacketType.NNG_MQTT_SUBSCRIBE) {
                 List<TopicQos> topicQosList = Collections.singletonList(new TopicQos(this.topic, this.qos));
@@ -75,7 +75,7 @@ public class QuicMQTTConnection implements MQTTConnection {
             }
         } catch (Exception ex) {
             ex.printStackTrace();
-            System.out.println(ex.getMessage());
+            logger.info(ex.getMessage());
             return -1;
         }
         return 0;
@@ -83,17 +83,17 @@ public class QuicMQTTConnection implements MQTTConnection {
 
 
     final BiFunction<Message, String, Integer> handler = (msg, arg) -> {
-        System.out.println(arg);
+        logger.info(arg);
         return 0;
     };
 
     final BiFunction<Message, String, Integer> recvHandler = (msg, arg) -> {
-        System.out.println("1111"+arg);
+        logger.info("1111"+arg);
         try {
             PublishMsg publishMsg = new PublishMsg(msg);
-            System.out.println("Topic: " + publishMsg.getTopic());
-            System.out.println("Qos: " + publishMsg.getQos());
-            System.out.println("Payload: " + StandardCharsets.UTF_8.decode(publishMsg.getPayload()));
+            logger.info("Topic: " + publishMsg.getTopic());
+            logger.info("Qos: " + publishMsg.getQos());
+            logger.info("Payload: " + StandardCharsets.UTF_8.decode(publishMsg.getPayload()));
         } catch (NngException e) {
             logger.log(Level.SEVERE, "recv failed ", e);
             throw new RuntimeException(e);
