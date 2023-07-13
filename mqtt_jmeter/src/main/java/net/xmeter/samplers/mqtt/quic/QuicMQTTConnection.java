@@ -59,19 +59,19 @@ public class QuicMQTTConnection implements MQTTConnection {
 
 
     final BiFunction<Message, Socket, Integer> connectHandler = (msg, sock) -> {
-        String connInfo = "Callback: Connected";
-        logger.info(connInfo);
         try {
             if (this.packetType == MqttPacketType.NNG_MQTT_SUBSCRIBE) {
                 List<TopicQos> topicQosList = Collections.singletonList(new TopicQos(this.topic, this.qos));
                 SubscribeMsg subMsg = new SubscribeMsg(topicQosList);
                 sock.sendMessage(subMsg);
+                logger.info("Callback: sub");
             } else if (this.packetType == MqttPacketType.NNG_MQTT_PUBLISH) {
                 PublishMsg pubMsg = new PublishMsg();
                 pubMsg.setPayload(this.payload);
                 pubMsg.setQos(this.qos);
                 pubMsg.setTopic(this.topic);
                 sock.sendMessage(pubMsg);
+                logger.info("Callback: pub");
             }
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -91,9 +91,10 @@ public class QuicMQTTConnection implements MQTTConnection {
         logger.info("1111"+arg);
         try {
             PublishMsg publishMsg = new PublishMsg(msg);
-            logger.info("Topic: " + publishMsg.getTopic());
-            logger.info("Qos: " + publishMsg.getQos());
-            logger.info("Payload: " + StandardCharsets.UTF_8.decode(publishMsg.getPayload()));
+            logger.info("Recieved =>"+
+                            "\nTopic: " + publishMsg.getTopic() +
+                            "\nQos: " + publishMsg.getQos()+
+                            "\nPayload: " + StandardCharsets.UTF_8.decode(publishMsg.getPayload()));
         } catch (NngException e) {
             logger.log(Level.SEVERE, "recv failed ", e);
             throw new RuntimeException(e);
@@ -135,7 +136,6 @@ public class QuicMQTTConnection implements MQTTConnection {
         try {
             this.sock.setConnectCallback(new QuicCallback(connectHandler), this.sock);
             this.sock.setSendCallback(new QuicCallback(handler), sendInfo);
-            Thread.sleep(3000);
             return new MQTTPubResult(true);
         } catch (Exception exception) {
             return new MQTTPubResult(false, exception.getMessage());
@@ -151,7 +151,7 @@ public class QuicMQTTConnection implements MQTTConnection {
             this.topic = topicNames[0];
             this.packetType = MqttPacketType.NNG_MQTT_SUBSCRIBE;
             this.sock.setConnectCallback(new QuicCallback(connectHandler), this.sock);
-            logger.info("clientId=>"+this.clientId+" topic=>"+topic +" receivedInfo=>"+receivedInfo);
+            logger.info("clientId=>"+this.clientId+" topic=>"+topic);
             this.sock.setReceiveCallback(new QuicCallback(recvHandler), receivedInfo);
             this.sock.setSendCallback(new QuicCallback(handler), sendInfo);
         }

@@ -135,7 +135,7 @@ public class SubSampler extends AbstractMQTTSampler {
 			if (!topics.contains(topicsName)) {
 				topics.add(topicsName);
 				topicSubscribed.put(clientId, topics);
-				logger.fine("Listen to topics: " + topicsName);
+				logger.info("Listen to topics: " + topicsName);
 				listenToTopics(topicsName);  // TODO: run once or multiple times ?
 			}
 		}
@@ -191,7 +191,7 @@ public class SubSampler extends AbstractMQTTSampler {
 		}
 		result = fillOKResult(result, bean.getReceivedMessageSize(), message, content.toString());
 		if (logger.isLoggable(Level.FINE)) {
-			logger.fine("sub [topic]: " + topicName + ", [payload]: " + content.toString());
+			logger.info("sub [topic]: " + topicName + ", [payload]: " + content.toString());
 		}
 		
 		if(receivedCount == 0) {
@@ -225,7 +225,7 @@ public class SubSampler extends AbstractMQTTSampler {
 		}
 
 		connection.subscribe(paraTopics, MQTTQoS.fromValue(qos), () -> {
-			logger.fine(() -> "sub successful, topic length is " + paraTopics.length);
+			logger.info(() -> "sub successful, topic length is " + paraTopics.length);
 		}, error -> {
 			logger.log(Level.INFO, "subscribe failed", error);
 			subFailed = true;

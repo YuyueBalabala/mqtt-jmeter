@@ -151,7 +151,7 @@ public class PubSampler extends AbstractMQTTSampler {
 			
 			result.sampleStart();
 			if (logger.isLoggable(Level.FINE)) {
-				logger.fine("pub [topic]: " + topicName + ", [payload]: " + new String(toSend));
+				logger.info("pub [topic]: " + topicName + ", [payload]: " + new String(toSend));
 			}
 
 			MQTTPubResult pubResult = connection.publish(topicName, toSend, qos_enum, retainedMsg);
@@ -161,8 +161,8 @@ public class PubSampler extends AbstractMQTTSampler {
 			result.setSentBytes(toSend.length);
 			result.setLatency(result.getEndTime() - result.getStartTime());
 			result.setSuccessful(pubResult.isSuccessful());
-			
 			if(pubResult.isSuccessful()) {
+				System.out.println("Publish successfuly.");
 				result.setResponseData("Publish successfuly.".getBytes());
 				result.setResponseMessage(MessageFormat.format("publish successfully for Connection {0}.", connection));
 				result.setResponseCodeOK();	
