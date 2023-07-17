@@ -1,5 +1,6 @@
 package net.xmeter.samplers.mqtt.quic;
 
+import com.sun.scenario.effect.impl.sw.java.JSWBlend_SRC_OUTPeer;
 import net.xmeter.Constants;
 import net.xmeter.Util;
 import net.xmeter.samplers.SubSampler;
@@ -31,7 +32,8 @@ public class QuicSample {
         parameters.setClientId(clientId);
         MQTTClient client = MQTT.getInstance(Constants.QUIC_MQTT_CLIENT_NAME).createClient(parameters);
         MQTTConnection connection = client.connect();
-        connection.publish("123-topic","111111".getBytes(),AT_LEAST_ONCE,true);
+        MQTTPubResult result = connection.publish("123-topic","111111".getBytes(),AT_LEAST_ONCE,true);
+        System.out.println(result.isSuccessful());
         TimeUnit.SECONDS.sleep(60);
     }
 
@@ -51,5 +53,18 @@ public class QuicSample {
         }, error -> {
             logger.log(Level.INFO, "subscribe failed", error);
         });
+    }
+
+
+    @Test
+    public void testConn() throws Exception {
+        ConnectionParameters parameters = new ConnectionParameters();
+        parameters.setHost("10.42.3.130");
+        parameters.setPort(14567);
+        String clientId = Util.generateClientId("QUI-");
+        parameters.setClientId(clientId);
+        MQTTClient client = MQTT.getInstance(Constants.QUIC_MQTT_CLIENT_NAME).createClient(parameters);
+        MQTTConnection connection = client.connect();
+        TimeUnit.SECONDS.sleep(60);
     }
 }

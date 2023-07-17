@@ -1,10 +1,7 @@
 package net.xmeter.samplers.mqtt.quic;
 
 import net.xmeter.samplers.ConnectSampler;
-import net.xmeter.samplers.mqtt.MQTTConnection;
-import net.xmeter.samplers.mqtt.MQTTPubResult;
-import net.xmeter.samplers.mqtt.MQTTQoS;
-import net.xmeter.samplers.mqtt.MQTTSubListener;
+import net.xmeter.samplers.mqtt.*;
 import net.xmeter.samplers.mqtt.quic.internal.mqtt.constants.MqttPacketType;
 import net.xmeter.samplers.mqtt.quic.mqtt.MqttQuicClientSocket;
 import net.xmeter.samplers.mqtt.quic.mqtt.callback.QuicCallback;
@@ -18,6 +15,8 @@ import net.xmeter.samplers.mqtt.quic.nng.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.logging.Level;
@@ -44,7 +43,11 @@ public class QuicMQTTConnection implements MQTTConnection {
     private final String clientId;
     private boolean retained;
 
-    public MqttPacketType packetType;
+    private MqttPacketType packetType;
+    private Semaphore pubLock;
+
+    private int connectTimeout =10;
+
 
 
 
@@ -84,6 +87,7 @@ public class QuicMQTTConnection implements MQTTConnection {
 
     final BiFunction<Message, String, Integer> handler = (msg, arg) -> {
         logger.info(arg);
+        pubLock.release();
         return 0;
     };
 
@@ -134,9 +138,12 @@ public class QuicMQTTConnection implements MQTTConnection {
         logger.info("clientId=>"+this.clientId+" payload=>"+this.payload+" topic=>"+topic +" qos=>"+this.qos);
         this.packetType = MqttPacketType.NNG_MQTT_PUBLISH;
         try {
+             pubLock = new Semaphore(0);
             this.sock.setConnectCallback(new QuicCallback(connectHandler), this.sock);
             this.sock.setSendCallback(new QuicCallback(handler), sendInfo);
-            return new MQTTPubResult(true);
+
+            return new MQTTPubResult(pubLock.tryAcquire(connectTimeout, TimeUnit.SECONDS));
+
         } catch (Exception exception) {
             return new MQTTPubResult(false, exception.getMessage());
         }

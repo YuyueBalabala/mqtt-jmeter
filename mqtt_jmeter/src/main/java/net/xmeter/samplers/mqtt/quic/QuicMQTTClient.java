@@ -6,6 +6,7 @@ import net.xmeter.samplers.mqtt.MQTTConnection;
 import net.xmeter.samplers.mqtt.quic.mqtt.MqttQuicClientSocket;
 import net.xmeter.samplers.mqtt.quic.mqtt.msg.ConnectMsg;
 import net.xmeter.samplers.mqtt.quic.nng.NngException;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.logging.Logger;
 
@@ -48,8 +49,11 @@ public class QuicMQTTClient  implements MQTTClient {
 //        connMsg.setCleanSession(cleanSession);
 //        connMsg.setKeepAlive(keepAlive);
 //        connMsg.setProtoVersion(4);
-//        connMsg.setPassword(password);
-//        connMsg.setUserName(username);
+
+        if(!StringUtils.isEmpty(username) && !StringUtils.isEmpty(password)){
+            connMsg.setPassword(password);
+            connMsg.setUserName(username);
+        }
         connMsg.setCleanSession(true);
         connMsg.setKeepAlive((short) 60);
         connMsg.setProtoVersion(4);
