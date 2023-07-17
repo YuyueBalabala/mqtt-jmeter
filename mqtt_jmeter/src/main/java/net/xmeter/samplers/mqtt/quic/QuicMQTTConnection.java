@@ -1,7 +1,10 @@
 package net.xmeter.samplers.mqtt.quic;
 
 import net.xmeter.samplers.ConnectSampler;
-import net.xmeter.samplers.mqtt.*;
+import net.xmeter.samplers.mqtt.MQTTConnection;
+import net.xmeter.samplers.mqtt.MQTTPubResult;
+import net.xmeter.samplers.mqtt.MQTTQoS;
+import net.xmeter.samplers.mqtt.MQTTSubListener;
 import net.xmeter.samplers.mqtt.quic.internal.mqtt.constants.MqttPacketType;
 import net.xmeter.samplers.mqtt.quic.mqtt.MqttQuicClientSocket;
 import net.xmeter.samplers.mqtt.quic.mqtt.callback.QuicCallback;
@@ -16,7 +19,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.logging.Level;
@@ -32,69 +34,32 @@ public class QuicMQTTConnection implements MQTTConnection {
 
     private static final Logger logger = Logger.getLogger(ConnectSampler.class.getCanonicalName());
 
-
-    private String topic;
-    private byte qos;
-    private String payload;
-
     private final MqttQuicClientSocket sock;
     private MQTTSubListener listener;
 
     private final String clientId;
-    private boolean retained;
-
-    private MqttPacketType packetType;
-    private Semaphore pubLock;
-
-    private int connectTimeout =10;
+    private boolean isConn = false;
 
 
 
 
 
-    public QuicMQTTConnection(MqttQuicClientSocket sock,String clientId) {
+    public QuicMQTTConnection(MqttQuicClientSocket sock,String clientId,boolean isConn ) {
         this.sock = sock;
         this.clientId = clientId;
+        this.isConn = isConn;
+        this.sock.setSendCallback(new QuicCallback(handler), sendInfo);
+        this.sock.setReceiveCallback(new QuicCallback(recvHandler), receivedInfo);
     }
 
-    private final String disconnInfo = "Callback: Disconnected";
-    private final String sendInfo = "Callback: Sent";
+    private final static String disconnInfo = "Callback: Disconnected";
+    private final static String sendInfo = "Callback: Sent";
+    private final static String receivedInfo = "Callback: Received";
 
 
-    final BiFunction<Message, Socket, Integer> connectHandler = (msg, sock) -> {
-        try {
-            if (this.packetType == MqttPacketType.NNG_MQTT_SUBSCRIBE) {
-                List<TopicQos> topicQosList = Collections.singletonList(new TopicQos(this.topic, this.qos));
-                SubscribeMsg subMsg = new SubscribeMsg(topicQosList);
-                sock.sendMessage(subMsg);
-                logger.info("Callback: sub");
-            } else if (this.packetType == MqttPacketType.NNG_MQTT_PUBLISH) {
-                PublishMsg pubMsg = new PublishMsg();
-                pubMsg.setPayload(this.payload);
-                pubMsg.setQos(this.qos);
-                pubMsg.setTopic(this.topic);
-                sock.sendMessage(pubMsg);
-                logger.info("Callback: pub");
-            }
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.info(ex.getMessage());
-            return -1;
-        }
-        return 0;
-    };
 
-
-    final BiFunction<Message, String, Integer> handler = (msg, arg) -> {
+    final static BiFunction<Message, String, Integer> recvHandler = (msg, arg) -> {
         logger.info(arg);
-        if(this.packetType == MqttPacketType.NNG_MQTT_PUBLISH){
-            pubLock.release();
-        }
-        return 0;
-    };
-
-    final BiFunction<Message, String, Integer> recvHandler = (msg, arg) -> {
-        logger.info("1111"+arg);
         try {
             PublishMsg publishMsg = new PublishMsg(msg);
             logger.info("Recieved =>"+
@@ -115,7 +80,7 @@ public class QuicMQTTConnection implements MQTTConnection {
 
     @Override
     public boolean isConnectionSucc() {
-        return true;
+        return isConn;
     }
 
     @Override
@@ -131,48 +96,52 @@ public class QuicMQTTConnection implements MQTTConnection {
 
     }
 
+    final static BiFunction<Message, String, Integer> handler = (msg, arg) -> {
+        logger.info(arg);
+        return 0;
+    };
+
     @Override
     public MQTTPubResult publish(String topicName, byte[] message, MQTTQoS qos, boolean retained) {
-        this.payload = new String(message);
-        this.qos = QuicUtil.qosVal(qos);
-        this.topic = topicName;
-        this.retained = retained;
-        logger.info("clientId=>"+this.clientId+" payload=>"+this.payload+" topic=>"+topic +" qos=>"+this.qos);
-        this.packetType = MqttPacketType.NNG_MQTT_PUBLISH;
+        if(!isConn){
+            return new MQTTPubResult(false);
+        }
         try {
-             pubLock = new Semaphore(0);
-            this.sock.setConnectCallback(new QuicCallback(connectHandler), this.sock);
-            this.sock.setSendCallback(new QuicCallback(handler), sendInfo);
 
-            return new MQTTPubResult(pubLock.tryAcquire(connectTimeout, TimeUnit.SECONDS));
+            PublishMsg pubMsg = new PublishMsg();
+            pubMsg.setPayload(new String(message));
+            byte qosVal = QuicUtil.qosVal(qos);
+            pubMsg.setQos(qosVal);
+            pubMsg.setTopic(topicName);
+            pubMsg.setRetain(retained);
+            sock.sendMessage(pubMsg);
+            logger.info("clientId=>"+this.clientId+" payload=>"+new String(message)+" topic=>"+topicName +" qos=>"+qosVal);
+
+            return new MQTTPubResult(true);
 
         } catch (Exception exception) {
+            logger.log(Level.SEVERE, "Publish failed :" + clientId, exception);
             return new MQTTPubResult(false, exception.getMessage());
         }
     }
 
     @Override
     public void subscribe(String[] topicNames, MQTTQoS qos, Runnable onSuccess, Consumer<Throwable> onFailure) {
-
-        this.qos = QuicUtil.qosVal(qos);
-        String receivedInfo = "Callback: Received";
+        if(!isConn){
+            return;
+        }
+        byte qosVal = QuicUtil.qosVal(qos);
         for(String topic:topicNames){
-            this.topic = topicNames[0];
-            this.packetType = MqttPacketType.NNG_MQTT_SUBSCRIBE;
-            this.sock.setConnectCallback(new QuicCallback(connectHandler), this.sock);
-            logger.info("clientId=>"+this.clientId+" topic=>"+topic);
-            this.sock.setReceiveCallback(new QuicCallback(recvHandler), receivedInfo);
-            this.sock.setSendCallback(new QuicCallback(handler), sendInfo);
-        }
-
-        for (; ; ) {
+            List<TopicQos> topicQosList = Collections.singletonList(new TopicQos(topic, qosVal));
+            SubscribeMsg subMsg = null;
             try {
-                Thread.sleep(1000);
-            } catch (InterruptedException exception) {
-                exception.printStackTrace();
+                subMsg = new SubscribeMsg(topicQosList);
+                sock.sendMessage(subMsg);
+            } catch (NngException e) {
+                throw new RuntimeException(e);
             }
+            logger.info("clientId=>"+this.clientId+" topic=>"+topic);
         }
-
     }
 
     @Override

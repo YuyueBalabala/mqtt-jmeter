@@ -32,9 +32,16 @@ public class QuicSample {
         parameters.setClientId(clientId);
         MQTTClient client = MQTT.getInstance(Constants.QUIC_MQTT_CLIENT_NAME).createClient(parameters);
         MQTTConnection connection = client.connect();
-        MQTTPubResult result = connection.publish("123-topic","111111".getBytes(),AT_LEAST_ONCE,true);
-        System.out.println(result.isSuccessful());
-        TimeUnit.SECONDS.sleep(10);
+
+
+        for(int i=0;i<5;i++){
+            new Thread(() -> {
+                MQTTPubResult result = connection.publish("test-topic","111111".getBytes(),AT_LEAST_ONCE,true);
+                logger.info(    ""+result.isSuccessful());
+            }, "t"+i).start();
+        }
+        TimeUnit.SECONDS.sleep(30);
+
     }
 
     @Test
@@ -53,6 +60,9 @@ public class QuicSample {
         }, error -> {
             logger.log(Level.INFO, "subscribe failed", error);
         });
+
+        TimeUnit.SECONDS.sleep(30);
+
     }
 
 
