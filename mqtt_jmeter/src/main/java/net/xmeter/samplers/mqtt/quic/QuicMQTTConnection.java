@@ -87,7 +87,9 @@ public class QuicMQTTConnection implements MQTTConnection {
 
     final BiFunction<Message, String, Integer> handler = (msg, arg) -> {
         logger.info(arg);
-        pubLock.release();
+        if(this.packetType == MqttPacketType.NNG_MQTT_PUBLISH){
+            pubLock.release();
+        }
         return 0;
     };
 
@@ -176,5 +178,14 @@ public class QuicMQTTConnection implements MQTTConnection {
     @Override
     public void setSubListener(MQTTSubListener listener) {
         this.listener = listener;
+    }
+
+
+
+    @Override
+    public String toString() {
+        return "QuicMQTTConnection{" +
+                "clientId='" + clientId + '\'' +
+                '}';
     }
 }

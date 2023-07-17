@@ -24,7 +24,7 @@ public class QuicSample {
     private static final Logger logger = Logger.getLogger(QuicSample.class.getCanonicalName());
 
     @Test
-    public void test() throws Exception {
+    public void testPub() throws Exception {
         ConnectionParameters parameters = new ConnectionParameters();
         parameters.setHost("10.42.3.130");
         parameters.setPort(14567);
@@ -34,7 +34,7 @@ public class QuicSample {
         MQTTConnection connection = client.connect();
         MQTTPubResult result = connection.publish("123-topic","111111".getBytes(),AT_LEAST_ONCE,true);
         System.out.println(result.isSuccessful());
-        TimeUnit.SECONDS.sleep(60);
+        TimeUnit.SECONDS.sleep(10);
     }
 
     @Test
