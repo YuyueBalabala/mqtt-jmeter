@@ -4,10 +4,16 @@ import net.xmeter.samplers.mqtt.ConnectionParameters;
 import net.xmeter.samplers.mqtt.MQTTClient;
 import net.xmeter.samplers.mqtt.MQTTConnection;
 import net.xmeter.samplers.mqtt.quic.mqtt.MqttQuicClientSocket;
+import net.xmeter.samplers.mqtt.quic.mqtt.callback.QuicCallback;
 import net.xmeter.samplers.mqtt.quic.mqtt.msg.ConnectMsg;
+import net.xmeter.samplers.mqtt.quic.nng.Message;
 import net.xmeter.samplers.mqtt.quic.nng.NngException;
+import net.xmeter.samplers.mqtt.quic.nng.Socket;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 import java.util.logging.Logger;
 
 /**
@@ -20,42 +26,29 @@ public class QuicMQTTClient  implements MQTTClient {
 
     private static final Logger logger = Logger.getLogger(QuicMQTTClient.class.getCanonicalName());
 
-
     private MqttQuicClientSocket sock;
-    private String clientId;
-    private String url;
-    private ConnectMsg connMsg ;
 
-    private  short keepAlive;
-    private String username;
-    private String password;
-    private boolean cleanSession;
+    private boolean isConn = false;
+
+    final private Semaphore connLock =new Semaphore(0);
+
+    private ConnectionParameters parameters;
 
 
     public QuicMQTTClient(ConnectionParameters parameters) {
-        this.clientId = parameters.getClientId();
-        this.url = createHostAddress(parameters);
-        this.keepAlive = parameters.getKeepAlive();
-        this.username = parameters.getUsername();
-        this.password = parameters.getPassword();
-        this.cleanSession = parameters.isCleanSession();
+        this.parameters = parameters;
     }
 
-    private ConnectMsg createConnMsg(String clientId, short keepAlive, String username, String password, boolean cleanSession) throws NngException {
+    private ConnectMsg createConnMsg() throws NngException {
         ConnectMsg connMsg = new ConnectMsg();
-        connMsg.setClientId(clientId);
+        connMsg.setClientId(parameters.getClientId());
 
-
-//        connMsg.setCleanSession(cleanSession);
-//        connMsg.setKeepAlive(keepAlive);
-//        connMsg.setProtoVersion(4);
-
-        if(!StringUtils.isEmpty(username) && !StringUtils.isEmpty(password)){
-            connMsg.setPassword(password);
-            connMsg.setUserName(username);
+        if(!StringUtils.isEmpty(parameters.getUsername()) && !StringUtils.isEmpty(parameters.getPassword())){
+            connMsg.setPassword(parameters.getPassword());
+            connMsg.setUserName(parameters.getUsername());
         }
-        connMsg.setCleanSession(true);
-        connMsg.setKeepAlive((short) 60);
+        connMsg.setCleanSession(parameters.isCleanSession());
+        connMsg.setKeepAlive(parameters.getKeepAlive());
         connMsg.setProtoVersion(4);
 
         return connMsg;
@@ -70,15 +63,27 @@ public class QuicMQTTClient  implements MQTTClient {
 
     @Override
     public String getClientId() {
-        return this.clientId;
+        return parameters.getClientId();
     }
 
     @Override
     public MQTTConnection connect() throws Exception {
-        ConnectMsg connMsg =  createConnMsg(clientId,keepAlive,username,password,cleanSession);
-        this.sock = new MqttQuicClientSocket(this.url);
-        logger.info(() -> "Created mqtt quic socket: " + this.clientId +" url: "+this.url);
+        ConnectMsg connMsg =  createConnMsg();
+        String url =createHostAddress(parameters);
+        this.sock = new MqttQuicClientSocket(url);
+        logger.info(() -> "Created mqtt quic socket: " + parameters.getClientId() +" url: "+url);
+
         this.sock.sendMessage(connMsg);
-        return new QuicMQTTConnection(this.sock,this.clientId);
+        this.sock.setConnectCallback(new QuicCallback(connectHandler), this.sock);
+
+        return new QuicMQTTConnection(this.sock,parameters.getClientId(),connLock.tryAcquire(10, TimeUnit.SECONDS));
+
     }
+
+    final BiFunction<Message, Socket, Integer> connectHandler = (msg, sock) -> {
+        logger.info(" Callback: connect");
+        isConn = true;
+        connLock.release();
+        return 0;
+    };
 }
