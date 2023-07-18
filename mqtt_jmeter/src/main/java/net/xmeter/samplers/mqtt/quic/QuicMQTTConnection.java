@@ -32,6 +32,10 @@ import java.util.logging.Logger;
 
 public class QuicMQTTConnection implements MQTTConnection {
 
+    private final static String disconnInfo = "Callback: Disconnected";
+    private final static String sendInfo = "Callback: Sent";
+    private final static String receivedInfo = "Callback: Received";
+
     private static final Logger logger = Logger.getLogger(ConnectSampler.class.getCanonicalName());
 
     private final MqttQuicClientSocket sock;
@@ -39,10 +43,6 @@ public class QuicMQTTConnection implements MQTTConnection {
 
     private final String clientId;
     private boolean isConn = false;
-
-
-
-
 
     public QuicMQTTConnection(MqttQuicClientSocket sock,String clientId,boolean isConn ) {
         this.sock = sock;
@@ -52,11 +52,10 @@ public class QuicMQTTConnection implements MQTTConnection {
         this.sock.setReceiveCallback(new QuicCallback(recvHandler), receivedInfo);
     }
 
-    private final static String disconnInfo = "Callback: Disconnected";
-    private final static String sendInfo = "Callback: Sent";
-    private final static String receivedInfo = "Callback: Received";
-
-
+    final static BiFunction<Message, String, Integer> handler = (msg, arg) -> {
+        logger.info(arg);
+        return 0;
+    };
 
     final static BiFunction<Message, String, Integer> recvHandler = (msg, arg) -> {
         logger.info(arg);
@@ -93,13 +92,9 @@ public class QuicMQTTConnection implements MQTTConnection {
     public void disconnect() throws Exception {
         this.sock.setDisconnectCallback(new QuicCallback(handler), disconnInfo);
         logger.info("disconnect:"+clientId);
-
     }
 
-    final static BiFunction<Message, String, Integer> handler = (msg, arg) -> {
-        logger.info(arg);
-        return 0;
-    };
+
 
     @Override
     public MQTTPubResult publish(String topicName, byte[] message, MQTTQoS qos, boolean retained) {
