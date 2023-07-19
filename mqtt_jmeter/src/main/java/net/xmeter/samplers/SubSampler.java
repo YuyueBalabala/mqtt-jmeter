@@ -103,7 +103,7 @@ public class SubSampler extends AbstractMQTTSampler {
 		if (connection == null) {
 			return fillFailedResult(result, "500", "Subscribe failed because connection is not established.");
 		}
-		logger.info("conn:"+connection.toString());
+		logger.info("clientId："+clientId+" conn:"+connection.toString());
 
 		sampleByTime = SAMPLE_ON_CONDITION_OPTION1.equals(getSampleCondition());
 		try {

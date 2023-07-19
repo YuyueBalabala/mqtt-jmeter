@@ -3,6 +3,7 @@ package net.xmeter.samplers.mqtt.quic;
 import net.xmeter.Constants;
 import net.xmeter.Util;
 import net.xmeter.samplers.mqtt.*;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
@@ -16,10 +17,10 @@ import static net.xmeter.samplers.mqtt.MQTTQoS.AT_LEAST_ONCE;
  * @date ：Created in 2023/7/11 下午5:22
  * @description：
  */
+@Ignore
+public class QuicSampleTest {
 
-public class QuicSample {
-
-    private static final Logger logger = Logger.getLogger(QuicSample.class.getCanonicalName());
+    private static final Logger logger = Logger.getLogger(QuicSampleTest.class.getCanonicalName());
 
     @Test
     public void testPub() throws Exception {
@@ -50,6 +51,11 @@ public class QuicSample {
         MQTTConnection connection = client.connect();
         String[] topicNames =new String[1];
         topicNames[0]="test-topic";
+        connection.setSubListener(((topic, message, ack) -> {
+            ack.run();
+            logger.info("pub sampler success !");
+        }));
+
         connection.subscribe(topicNames, AT_LEAST_ONCE, () -> {
             logger.info(() -> "sub successful, topic length is " + topicNames.length);
         }, error -> {

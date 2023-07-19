@@ -28,8 +28,8 @@ public class QuicCallback<T, U, R> implements NngMsgCallback {
     public QuicCallback(BiFunction<Message, T, Integer> function) {
         this.function = function;
     }
+
     public QuicCallback(BiFunction<Message, T, Integer> function, Semaphore lock) {
-        this.arg = arg;
         this.function = function;
         this.lock = lock;
     }
@@ -45,9 +45,8 @@ public class QuicCallback<T, U, R> implements NngMsgCallback {
     @Override
     public int callback(Pointer p1, Pointer p2) {
         try {
-            if(lock !=null){
+            if(lock !=null && lock.availablePermits() <=0){
                 this.lock.release();
-                logger.info("lock:"+lock);
             }
             return this.function.apply(p1 == Pointer.NULL ? null : new Message(p1), this.arg);
         } catch (Exception e) {

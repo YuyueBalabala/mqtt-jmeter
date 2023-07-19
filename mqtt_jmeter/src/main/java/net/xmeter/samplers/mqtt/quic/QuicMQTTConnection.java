@@ -44,12 +44,13 @@ public class QuicMQTTConnection implements MQTTConnection {
     private final static Semaphore pubLock = new Semaphore(0);
     private final static int pubTimeout = 10;
 
-    public QuicMQTTConnection(MqttQuicClientSocket sock,String clientId,boolean isConn ) {
+    private  Runnable onSuccess;
+
+    public QuicMQTTConnection(MqttQuicClientSocket sock,String clientId,boolean isConn) {
         this.sock = sock;
         this.clientId = clientId;
         this.isConn = isConn;
         this.sock.setSendCallback(new QuicCallback(handler,pubLock), sendInfo);
-        this.sock.setReceiveCallback(new QuicCallback(recvHandler), receivedInfo);
     }
 
     final BiFunction<Message, String, Integer> handler = (msg, arg) -> {
@@ -57,14 +58,16 @@ public class QuicMQTTConnection implements MQTTConnection {
         return 0;
     };
 
-    final static BiFunction<Message, String, Integer> recvHandler = (msg, arg) -> {
+    final BiFunction<Message, String, Integer> recvHandler = (msg, arg) -> {
         logger.info(arg);
         try {
             PublishMsg publishMsg = new PublishMsg(msg);
+            String payload = String.valueOf(StandardCharsets.UTF_8.decode(publishMsg.getPayload()));
             logger.info("Recieved =>"+
                             "\nTopic: " + publishMsg.getTopic() +
                             "\nQos: " + publishMsg.getQos()+
-                            "\nPayload: " + StandardCharsets.UTF_8.decode(publishMsg.getPayload()));
+                            "\nPayload: " + payload);
+            this.listener.accept(publishMsg.getTopic(),payload,this.onSuccess);
         } catch (NngException e) {
             logger.log(Level.SEVERE, "recv failed ", e);
             throw new RuntimeException(e);
@@ -90,7 +93,7 @@ public class QuicMQTTConnection implements MQTTConnection {
 
     @Override
     public void disconnect() throws Exception {
-        this.sock.setDisconnectCallback(new QuicCallback(handler), disconnInfo);
+//        this.sock.setDisconnectCallback(new QuicCallback(handler), disconnInfo);
         logger.info("disconnect:"+clientId);
     }
 
@@ -109,7 +112,6 @@ public class QuicMQTTConnection implements MQTTConnection {
             pubMsg.setQos(qosVal);
             pubMsg.setTopic(topicName);
             pubMsg.setRetain(retained);
-            logger.info("lock:"+pubLock);
             sock.sendMessage(pubMsg);
             logger.info("clientId=>"+this.clientId+" payload=>"+new String(message)+" topic=>"+topicName +" qos=>"+qosVal);
             return new MQTTPubResult(pubLock.tryAcquire(pubTimeout,TimeUnit.SECONDS));
@@ -126,6 +128,9 @@ public class QuicMQTTConnection implements MQTTConnection {
             return;
         }
         byte qosVal = QuicUtil.qosVal(qos);
+        if(this.onSuccess == null){
+            this.onSuccess = onSuccess;
+        }
         for(String topic:topicNames){
             List<TopicQos> topicQosList = Collections.singletonList(new TopicQos(topic, qosVal));
             SubscribeMsg subMsg = null;
@@ -133,10 +138,12 @@ public class QuicMQTTConnection implements MQTTConnection {
                 subMsg = new SubscribeMsg(topicQosList);
                 sock.sendMessage(subMsg);
             } catch (NngException e) {
+                onFailure.accept(e);
                 throw new RuntimeException(e);
             }
             logger.info("clientId=>"+this.clientId+" topic=>"+topic);
         }
+        this.sock.setReceiveCallback(new QuicCallback(recvHandler), receivedInfo);
     }
 
     @Override
