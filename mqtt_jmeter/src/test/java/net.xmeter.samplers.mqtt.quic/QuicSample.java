@@ -1,9 +1,7 @@
 package net.xmeter.samplers.mqtt.quic;
 
-import com.sun.scenario.effect.impl.sw.java.JSWBlend_SRC_OUTPeer;
 import net.xmeter.Constants;
 import net.xmeter.Util;
-import net.xmeter.samplers.SubSampler;
 import net.xmeter.samplers.mqtt.*;
 import org.junit.Test;
 
@@ -32,13 +30,10 @@ public class QuicSample {
         parameters.setClientId(clientId);
         MQTTClient client = MQTT.getInstance(Constants.QUIC_MQTT_CLIENT_NAME).createClient(parameters);
         MQTTConnection connection = client.connect();
-
-
-        for(int i=0;i<5;i++){
-            new Thread(() -> {
-                MQTTPubResult result = connection.publish("test-topic","111111".getBytes(),AT_LEAST_ONCE,true);
-                logger.info(    ""+result.isSuccessful());
-            }, "t"+i).start();
+//        Problem with pub under multithreading
+        for(int i=0;i<10;i++){
+            MQTTPubResult result = connection.publish("test-topic","111111".getBytes(),AT_LEAST_ONCE,true);
+            logger.info(""+result.isSuccessful());
         }
         TimeUnit.SECONDS.sleep(30);
 

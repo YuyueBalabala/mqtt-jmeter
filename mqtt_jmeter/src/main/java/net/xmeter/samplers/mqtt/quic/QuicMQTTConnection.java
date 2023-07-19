@@ -1,11 +1,9 @@
 package net.xmeter.samplers.mqtt.quic;
 
-import net.xmeter.samplers.ConnectSampler;
 import net.xmeter.samplers.mqtt.MQTTConnection;
 import net.xmeter.samplers.mqtt.MQTTPubResult;
 import net.xmeter.samplers.mqtt.MQTTQoS;
 import net.xmeter.samplers.mqtt.MQTTSubListener;
-import net.xmeter.samplers.mqtt.quic.internal.mqtt.constants.MqttPacketType;
 import net.xmeter.samplers.mqtt.quic.mqtt.MqttQuicClientSocket;
 import net.xmeter.samplers.mqtt.quic.mqtt.callback.QuicCallback;
 import net.xmeter.samplers.mqtt.quic.mqtt.data.TopicQos;
@@ -13,12 +11,12 @@ import net.xmeter.samplers.mqtt.quic.mqtt.msg.PublishMsg;
 import net.xmeter.samplers.mqtt.quic.mqtt.msg.SubscribeMsg;
 import net.xmeter.samplers.mqtt.quic.nng.Message;
 import net.xmeter.samplers.mqtt.quic.nng.NngException;
-import net.xmeter.samplers.mqtt.quic.nng.Socket;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.logging.Level;
@@ -36,23 +34,25 @@ public class QuicMQTTConnection implements MQTTConnection {
     private final static String sendInfo = "Callback: Sent";
     private final static String receivedInfo = "Callback: Received";
 
-    private static final Logger logger = Logger.getLogger(ConnectSampler.class.getCanonicalName());
+    private static final Logger logger = Logger.getLogger(QuicMQTTConnection.class.getCanonicalName());
 
     private final MqttQuicClientSocket sock;
     private MQTTSubListener listener;
 
     private final String clientId;
     private boolean isConn = false;
+    private final static Semaphore pubLock = new Semaphore(0);
+    private final static int pubTimeout = 10;
 
     public QuicMQTTConnection(MqttQuicClientSocket sock,String clientId,boolean isConn ) {
         this.sock = sock;
         this.clientId = clientId;
         this.isConn = isConn;
-        this.sock.setSendCallback(new QuicCallback(handler), sendInfo);
+        this.sock.setSendCallback(new QuicCallback(handler,pubLock), sendInfo);
         this.sock.setReceiveCallback(new QuicCallback(recvHandler), receivedInfo);
     }
 
-    final static BiFunction<Message, String, Integer> handler = (msg, arg) -> {
+    final BiFunction<Message, String, Integer> handler = (msg, arg) -> {
         logger.info(arg);
         return 0;
     };
@@ -109,10 +109,10 @@ public class QuicMQTTConnection implements MQTTConnection {
             pubMsg.setQos(qosVal);
             pubMsg.setTopic(topicName);
             pubMsg.setRetain(retained);
+            logger.info("lock:"+pubLock);
             sock.sendMessage(pubMsg);
             logger.info("clientId=>"+this.clientId+" payload=>"+new String(message)+" topic=>"+topicName +" qos=>"+qosVal);
-
-            return new MQTTPubResult(true);
+            return new MQTTPubResult(pubLock.tryAcquire(pubTimeout,TimeUnit.SECONDS));
 
         } catch (Exception exception) {
             logger.log(Level.SEVERE, "Publish failed :" + clientId, exception);
