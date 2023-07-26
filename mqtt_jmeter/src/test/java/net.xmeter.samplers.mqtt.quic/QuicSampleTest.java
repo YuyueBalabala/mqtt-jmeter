@@ -30,22 +30,24 @@ public class QuicSampleTest {
         ConnectionParameters parameters = new ConnectionParameters();
         parameters.setHost("10.42.3.130");
         parameters.setPort(14567);
+        parameters.setConnectTimeout(10);
+
         String clientId = Util.generateClientId("QUIC");
         parameters.setClientId(clientId);
         MQTTClient client = MQTT.getInstance(Constants.QUIC_MQTT_CLIENT_NAME).createClient(parameters);
         MQTTConnection connection = client.connect();
 //        Problem with pub under multithreading
-        for(int i=0;i<10;i++){
+        for(int i=0;i<500;i++){
             MQTTPubResult result = connection.publish("test-topic","111111".getBytes(),AT_LEAST_ONCE,true);
             logger.info(""+result.isSuccessful());
         }
-        TimeUnit.SECONDS.sleep(30);
+        TimeUnit.SECONDS.sleep(60);
 
     }
 
     @Test
     public void testPubs() throws Exception {
-        TimeUnit.SECONDS.sleep(5);
+//        TimeUnit.SECONDS.sleep(5);
 
 //        ExecutorService service = Executors.newFixedThreadPool(10);
         for (int i = 0; i < 2; i++) {
@@ -54,6 +56,8 @@ public class QuicSampleTest {
                     ConnectionParameters parameters = new ConnectionParameters();
                     parameters.setHost("10.42.3.130");
                     parameters.setPort(14567);
+                    parameters.setConnectTimeout(10);
+
                     String clientId = Util.generateClientId("QUIC");
                     parameters.setClientId(clientId);
                     MQTTClient client = MQTT.getInstance(Constants.QUIC_MQTT_CLIENT_NAME).createClient(parameters);
@@ -85,6 +89,8 @@ public class QuicSampleTest {
         ConnectionParameters parameters = new ConnectionParameters();
         parameters.setHost("10.42.3.130");
         parameters.setPort(14567);
+        parameters.setConnectTimeout(10);
+
         String clientId = Util.generateClientId("QUIC");
         parameters.setClientId(clientId);
         MQTTClient client = MQTT.getInstance(Constants.QUIC_MQTT_CLIENT_NAME).createClient(parameters);
@@ -113,6 +119,8 @@ public class QuicSampleTest {
         ConnectionParameters parameters = new ConnectionParameters();
         parameters.setHost("10.42.3.134");
         parameters.setPort(14567);
+        parameters.setConnectTimeout(10);
+
 //            TimeUnit.SECONDS.sleep(5);
         String clientId = Util.generateClientId("QUI-");
         parameters.setClientId(clientId);
@@ -128,6 +136,7 @@ public class QuicSampleTest {
             ConnectionParameters parameters = new ConnectionParameters();
             parameters.setHost("10.42.3.130");
             parameters.setPort(14567);
+            parameters.setConnectTimeout(10);
 //            TimeUnit.SECONDS.sleep(5);
             String clientId = Util.generateClientId("QUI-");
             parameters.setClientId(clientId);
@@ -147,6 +156,8 @@ public class QuicSampleTest {
             ConnectionParameters parameters = new ConnectionParameters();
             parameters.setHost("10.42.3.130");
             parameters.setPort(14567);
+            parameters.setConnectTimeout(10);
+
             String clientId = Util.generateClientId("QUI-");
             parameters.setClientId(clientId);
             MQTTClient client = MQTT.getInstance(Constants.QUIC_MQTT_CLIENT_NAME).createClient(parameters);

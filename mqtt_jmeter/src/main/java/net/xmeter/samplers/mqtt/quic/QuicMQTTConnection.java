@@ -46,11 +46,16 @@ public class QuicMQTTConnection implements MQTTConnection {
 
     private  Runnable onSuccess;
 
+    private QuicCallback sendCb;
+    private QuicCallback recvCb;
+
+
     public QuicMQTTConnection(MqttQuicClientSocket sock,String clientId,boolean isConn) {
         this.sock = sock;
         this.clientId = clientId;
         this.isConn = isConn;
-        this.sock.setSendCallback(new QuicCallback(handler,pubLock), sendInfo);
+        this.sendCb = new QuicCallback(handler,pubLock);
+        this.sock.setSendCallback(this.sendCb, sendInfo);
     }
 
     final BiFunction<Message, String, Integer> handler = (msg, arg) -> {
@@ -143,7 +148,8 @@ public class QuicMQTTConnection implements MQTTConnection {
             }
             logger.info("clientId=>"+this.clientId+" topic=>"+topic);
         }
-        this.sock.setReceiveCallback(new QuicCallback(recvHandler), receivedInfo);
+        this.recvCb = new QuicCallback(recvHandler);
+        this.sock.setReceiveCallback(this.recvCb, receivedInfo);
     }
 
     @Override

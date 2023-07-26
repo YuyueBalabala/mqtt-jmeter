@@ -34,9 +34,13 @@ public class QuicMQTTClient  implements MQTTClient {
 
     private ConnectionParameters parameters;
 
+    private QuicCallback connCb;
+
 
     public QuicMQTTClient(ConnectionParameters parameters) {
         this.parameters = parameters;
+        this.connCb=new QuicCallback(connectHandler);
+
     }
 
     private ConnectMsg createConnMsg() throws NngException {
@@ -72,11 +76,10 @@ public class QuicMQTTClient  implements MQTTClient {
         String url =createHostAddress(parameters);
         this.sock = new MqttQuicClientSocket(url);
         logger.info(() -> "Created mqtt quic socket: " + parameters.getClientId() +" url: "+url);
-
         this.sock.sendMessage(connMsg);
-        this.sock.setConnectCallback(new QuicCallback(connectHandler), this.sock);
-
-        return new QuicMQTTConnection(this.sock,parameters.getClientId(),connLock.tryAcquire(10, TimeUnit.SECONDS));
+        this.sock.setConnectCallback(connCb, this.sock);
+        int timeout = parameters.getConnectTimeout() > 0? parameters.getConnectTimeout() : 10;
+        return new QuicMQTTConnection(this.sock,parameters.getClientId(),connLock.tryAcquire(timeout, TimeUnit.SECONDS));
 
     }
 
