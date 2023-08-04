@@ -151,7 +151,7 @@ public class QuicSampleTest {
 
     @Test
     public void testConns() throws Exception {
-//        ExecutorService service = Executors.newFixedThreadPool(2);
+        ExecutorService service = Executors.newFixedThreadPool(2);
         for(int i=0;i<3;i++){
             ConnectionParameters parameters = new ConnectionParameters();
             parameters.setHost("10.42.3.130");
@@ -162,7 +162,7 @@ public class QuicSampleTest {
             parameters.setClientId(clientId);
             MQTTClient client = MQTT.getInstance(Constants.QUIC_MQTT_CLIENT_NAME).createClient(parameters);
 
-//            service.submit(() -> {
+            service.submit(() -> {
                 try {
                     logger.info("client----"+client.toString());
                     MQTTConnection connection = client.connect();
@@ -170,7 +170,7 @@ public class QuicSampleTest {
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
-//            });
+            });
         }
 
 

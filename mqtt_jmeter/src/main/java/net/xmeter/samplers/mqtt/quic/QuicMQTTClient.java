@@ -76,8 +76,8 @@ public class QuicMQTTClient  implements MQTTClient {
         String url =createHostAddress(parameters);
         this.sock = new MqttQuicClientSocket(url);
         logger.info(() -> "Created mqtt quic socket: " + parameters.getClientId() +" url: "+url);
-        this.sock.sendMessage(connMsg);
         this.sock.setConnectCallback(connCb, this.sock);
+        this.sock.sendMessage(connMsg);
         int timeout = parameters.getConnectTimeout() > 0? parameters.getConnectTimeout() : 10;
         return new QuicMQTTConnection(this.sock,parameters.getClientId(),connLock.tryAcquire(timeout, TimeUnit.SECONDS));
 
